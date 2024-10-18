@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DTMF Signal Generator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- Plotly JS -->
+    <style>
+        body {
+            text-align: center;
+        }
+        .keys {
+            margin: 10px;
+        }
+        .keys button {
+            font-size: 24px;
+            padding: 10px;
+            margin: 5px;
+        }
+        .plots {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+        }
+        .plot-container {
+            width: 80%; /* Stretch horizontally */
+            max-width: 1000px;
+            margin: 10px 0;
+        }
+        #identified-key {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+
+<h1>DTMF Signal Generator and Analyzer</h1>
+
+<div class="keys">
+    <h3>Select a Key:</h3>
+    <div id="key-container">
+        <!-- Buttons for selecting keys -->
+        <button onclick="selectKey('1')">1</button>
+        <button onclick="selectKey('2')">2</button>
+        <button onclick="selectKey('3')">3</button>
+        <button onclick="selectKey('4')">4</button>
+        <button onclick="selectKey('5')">5</button>
+        <button onclick="selectKey('6')">6</button>
+        <button onclick="selectKey('7')">7</button>
+        <button onclick="selectKey('8')">8</button>
+        <button onclick="selectKey('9')">9</button>
+        <button onclick="selectKey('*')">*</button>
+        <button onclick="selectKey('0')">0</button>
+        <button onclick="selectKey('#')">#</button>
+    </div>
+    <p>Selected Key: <span id="selected-key"></span></p>
+    <button onclick="generateAndAnalyze()">Generate and Analyze</button>
+
+    <h3>Upload WAV File:</h3>
+    <input type="file" id="file-input" accept=".wav">
+    <button onclick="uploadFile()">Upload and Analyze</button>
+
+</div>
+
+<div class="plots">
+    <h3>Time-Domain Plot:</h3>
+    <div id="time-domain-plot" class="plot-container"></div>
+    <h3>Frequency-Domain Plot:</h3>
+    <div id="freq-domain-plot" class="plot-container"></div>
+    <h3>Combined Frequency Plot:</h3>
+    <div id="combined-plot" class="plot-container"></div>
+    <div id="identified-key"></div>
+</div>
+
+<script>
+    let selectedKey = '';
+
+    function selectKey(key) {
+        selectedKey = key;
+        document.getElementById('selected-key').textContent = selectedKey;
+        playKey(key); // Play sound immediately when a key is selected
+    }
+
+    function playKey(key) {
+        $.ajax({
+            url: '/play_key',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ key: key }),
+            success: function(response) {
+                console.log(response.message);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+
+    function generateAndAnalyze() {
+        if (selectedKey === '') {
+            alert("Please select a key.");
+            return;
+        }
+
+        $.ajax({
+            url: '/analyze_key',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ key: selectedKey }),
+            success: function(response) {
+                // Render Plotly plots
+                Plotly.newPlot('time-domain-plot', JSON.parse(response.time_domain_plot).data, JSON.parse(response.time_domain_plot).layout);
+                Plotly.newPlot('freq-domain-plot', JSON.parse(response.freq_domain_plot).data, JSON.parse(response.freq_domain_plot).layout);
+                Plotly.newPlot('combined-plot', JSON.parse(response.combined_plot).data, JSON.parse(response.combined_plot).layout);
+                
+                // Show identified key and frequencies
+                $('#identified-key').text("Identified DTMF Key: " + response.identified_key.join(', ') + 
+                                          " (Low: " + response.frequencies[0] + " Hz, High: " + response.frequencies[1] + " Hz)");
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+        
+    }
+    function uploadFile() {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+    
+        if (!file) {
+            alert("Please select a WAV file to upload.");
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append('file', file);
+    
+        $.ajax({
+            url: '/analyze_file',
+            type: 'POST',
+            processData: false,
+            contentType: false,
+            data: formData,
+            success: function(response) {
+                // Render the frequency-domain plot from the uploaded file
+                Plotly.newPlot('freq-domain-plot', JSON.parse(response.freq_domain_plot).data, JSON.parse(response.freq_domain_plot).layout);
+                
+                // Show the identified keys from the file
+                $('#identified-key').text("Identified DTMF Keys: " + response.identified_keys.join(', '));
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
