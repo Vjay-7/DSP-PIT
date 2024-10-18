@@ -1,5 +1,8 @@
 # DTMF Signal Generator with Sound and Adjustable Graph
 
+### Demo:
+![Demo](https://github.com/Vjay-7/DSP-PIT/blob/main/demo.gif)
+
 This project generates **Dual-Tone Multi-Frequency (DTMF)** signals, simulating the sounds produced by pressing keys on a phone keypad. You can use the web-based interface to select keys, generate tones, and visualize the signal graph interactively.
 
 ### Features:
@@ -13,8 +16,5 @@ This project generates **Dual-Tone Multi-Frequency (DTMF)** signals, simulating 
 - **JavaScript**: To handle button inputs and communicate with the server.
 - **Sounddevice**: For generating the DTMF tones based on the selected keys.
 - **Plotly**: To create dynamic and adjustable graphs for signal visualization.
-
-### Demo:
-![Demo](https://github.com/Vjay-7/DSP-PIT/blob/main/demo.gif)
-
+  
 Try it out and enjoy the sound of the **toot toot** tones!
