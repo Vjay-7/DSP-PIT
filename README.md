@@ -1,4 +1,4 @@
-# DTMF Signal Generator with Sound and Adjustable Graph
+# DTMF Signal Generator with Sound and Adjustable Graph with Toot Toot Tones
 
 ### Demo:
 ![Demo](https://github.com/Vjay-7/DSP-PIT/blob/main/demo.gif)
