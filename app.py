@@ -87,25 +87,24 @@ def analyze_key():
     data = request.json
     key = data.get('key')
     
-    # Generate DTMF tone for the selected key
+   
     signal, t, f_low, f_high = generate_dtmf_tone(key)
 
-    # Perform FFT
+  
     fs = 8000
     xf, magnitude = compute_fft(signal, fs)
 
-    # Create time-domain plot
+
     time_domain_plot = create_plotly_plot(t[:100], signal[:100], f"Time-Domain Signal for Key '{key}'", "Time [s]", "Amplitude")
     
-    # Create frequency-domain plot
+  
     freq_domain_plot = create_plotly_plot(xf, magnitude, f"Frequency-Domain Spectrum for Key '{key}'", "Frequency [Hz]", "Magnitude")
-    
-    # Create sine waves for low, high, and combined frequencies
+ 
     low_signal = np.sin(2 * np.pi * f_low * t)
     high_signal = np.sin(2 * np.pi * f_high * t)
     combined_signal = (low_signal + high_signal) / 2
 
-    # Create combined frequency sine wave plot
+    
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=t[:200], y=low_signal[:200], mode='lines', name='Low Frequency (Blue)', line=dict(color='blue')))
     fig.add_trace(go.Scatter(x=t[:200], y=high_signal[:200], mode='lines', name='High Frequency (Red)', line=dict(color='red')))
@@ -144,18 +143,18 @@ def analyze_file():
         # Perform FFT
         xf, magnitude = compute_fft(signal, fs)
 
-        # Identify the peaks
-        peak_indices = np.argsort(magnitude)[-2:]  # Get indices of the two highest peaks
+        
+        peak_indices = np.argsort(magnitude)[-2:]  
         identified_freqs = xf[peak_indices]
 
-        # Determine the identified key
+        
         identified_keys = []
         for freq in identified_freqs:
             for key, (f_low, f_high) in dtmf_frequencies.items():
                 if np.isclose(freq, f_low, atol=20) or np.isclose(freq, f_high, atol=20):
                     identified_keys.append(key)
 
-        # Create frequency-domain plot
+       
         freq_domain_plot = create_plotly_plot(xf, magnitude, "Frequency Spectrum from File", "Frequency [Hz]", "Magnitude")
 
         return jsonify({
@@ -163,7 +162,7 @@ def analyze_file():
             'identified_keys': identified_keys
         })
     except Exception as e:
-        # Log the error to the console and return an error response
+      
         print(f"Error analyzing file: {e}")
         return jsonify({"error": str(e)}), 500
 
