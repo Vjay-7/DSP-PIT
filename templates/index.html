@@ -147,17 +147,23 @@
             contentType: false,
             data: formData,
             success: function(response) {
-                // Render the frequency-domain plot from the uploaded file
+                // Render time-domain plot
+                Plotly.newPlot('time-domain-plot', JSON.parse(response.time_domain_plot).data, JSON.parse(response.time_domain_plot).layout);
+                // Render frequency-domain plot
                 Plotly.newPlot('freq-domain-plot', JSON.parse(response.freq_domain_plot).data, JSON.parse(response.freq_domain_plot).layout);
+                // Render combined frequency plot
+                Plotly.newPlot('combined-plot', JSON.parse(response.combined_plot).data, JSON.parse(response.combined_plot).layout);
                 
-                // Show the identified keys from the file
-                $('#identified-key').text("Identified DTMF Keys: " + response.identified_keys.join(', '));
+                // Display identified key and frequencies
+                $('#identified-key').text("Identified DTMF Key: " + response.identified_key + 
+                                          " (Low: " + response.frequencies[0] + " Hz, High: " + response.frequencies[1] + " Hz)");
             },
             error: function(error) {
                 console.log(error);
             }
         });
     }
+
 </script>
 
 </body>

@@ -95,10 +95,10 @@ def analyze_key():
     xf, magnitude = compute_fft(signal, fs)
 
 
-    time_domain_plot = create_plotly_plot(t[:100], signal[:100], f"Time-Domain Signal for Key '{key}'", "Time [s]", "Amplitude")
+    time_domain_plot = create_plotly_plot(t[:100], signal[:100], f"Time-Domain Signal", "Time [s]", "Amplitude")
     
   
-    freq_domain_plot = create_plotly_plot(xf, magnitude, f"Frequency-Domain Spectrum for Key '{key}'", "Frequency [Hz]", "Magnitude")
+    freq_domain_plot = create_plotly_plot(xf, magnitude, f"Frequency-Domain Spectrum", "Frequency [Hz]", "Magnitude")
  
     low_signal = np.sin(2 * np.pi * f_low * t)
     high_signal = np.sin(2 * np.pi * f_high * t)
@@ -110,7 +110,7 @@ def analyze_key():
     fig.add_trace(go.Scatter(x=t[:200], y=high_signal[:200], mode='lines', name='High Frequency (Red)', line=dict(color='red')))
     fig.add_trace(go.Scatter(x=t[:200], y=combined_signal[:200], mode='lines', name='Combined (Green)', line=dict(color='green')))
     fig.update_layout(
-        title=f"Sine Wave Representation for Key '{key}'",
+        title=f"Sine Wave Representation",
         xaxis_title="Time [s]",
         yaxis_title="Amplitude",
         hovermode="x unified",
@@ -129,7 +129,51 @@ def analyze_key():
         'frequencies': (f_low, f_high)
     })
 
-    
+def analyze_key_from_file(key):
+    try:
+        # Generate DTMF tone for the closest matched key
+        signal, t, f_low, f_high = generate_dtmf_tone(key)
+
+        # Perform FFT for the matched key's signal
+        fs = 8000
+        xf, magnitude = compute_fft(signal, fs)
+
+        # Time-domain plot
+        time_domain_plot = create_plotly_plot(t[:100], signal[:100], f"Time-Domain Signal", "Time [s]", "Amplitude")
+
+        # Frequency-domain plot
+        freq_domain_plot = create_plotly_plot(xf, magnitude, f"Frequency-Domain Spectrum", "Frequency [Hz]", "Magnitude")
+
+        # Sine wave plots (low and high frequencies)
+        low_signal = np.sin(2 * np.pi * f_low * t)
+        high_signal = np.sin(2 * np.pi * f_high * t)
+        combined_signal = (low_signal + high_signal) / 2
+
+        # Combined sine wave plot
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=t[:200], y=low_signal[:200], mode='lines', name='Low Frequency (Blue)', line=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=t[:200], y=high_signal[:200], mode='lines', name='High Frequency (Red)', line=dict(color='red')))
+        fig.add_trace(go.Scatter(x=t[:200], y=combined_signal[:200], mode='lines', name='Combined (Green)', line=dict(color='green')))
+        fig.update_layout(
+            title=f"Sine Wave Representation",
+            xaxis_title="Time [s]",
+            yaxis_title="Amplitude",
+            hovermode="x unified",
+            template="plotly_white"
+        )
+        combined_plot = pio.to_json(fig)
+
+        # Return all plots and matched key details
+        return jsonify({
+            'time_domain_plot': time_domain_plot,
+            'freq_domain_plot': freq_domain_plot,
+            'combined_plot': combined_plot,
+            'frequencies': (f_low, f_high),
+            'identified_key': key
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/analyze_file', methods=['POST'])
 def analyze_file():
     try:
@@ -137,34 +181,38 @@ def analyze_file():
         filepath = './uploaded.wav'
         file.save(filepath)
 
-        # Read WAV file
         signal, fs = read_wav_file(filepath)
-
-        # Perform FFT
         xf, magnitude = compute_fft(signal, fs)
 
-        
-        peak_indices = np.argsort(magnitude)[-2:]  
+        peak_indices = np.argsort(magnitude)[-2:]
         identified_freqs = xf[peak_indices]
 
-        
-        identified_keys = []
-        for freq in identified_freqs:
-            for key, (f_low, f_high) in dtmf_frequencies.items():
-                if np.isclose(freq, f_low, atol=20) or np.isclose(freq, f_high, atol=20):
-                    identified_keys.append(key)
+        f_low, f_high = np.sort(identified_freqs)
+        closest_key = match_closest_key(f_low, f_high)
 
-       
-        freq_domain_plot = create_plotly_plot(xf, magnitude, "Frequency Spectrum from File", "Frequency [Hz]", "Magnitude")
+        if closest_key:
+            return analyze_key_from_file(closest_key)
+        else:
+            return jsonify({"error": "No matching key found"}), 500
 
-        return jsonify({
-            'freq_domain_plot': freq_domain_plot,
-            'identified_keys': identified_keys
-        })
     except Exception as e:
-      
-        print(f"Error analyzing file: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+# Function to find the closest matching DTMF key based on the detected low and high frequencies
+def match_closest_key(f_low, f_high):
+    min_distance = float('inf')
+    closest_key = None
+
+    for key, (dtmf_low, dtmf_high) in dtmf_frequencies.items():
+        # Compute the distance between the detected frequencies and the DTMF frequencies
+        distance = np.sqrt((f_low - dtmf_low) ** 2 + (f_high - dtmf_high) ** 2)
+        if distance < min_distance:
+            min_distance = distance
+            closest_key = key
+
+    return closest_key
+
 
 if __name__ == '__main__':
     app.run(debug=True)
