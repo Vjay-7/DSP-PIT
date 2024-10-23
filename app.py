@@ -188,6 +188,7 @@ def analyze_file():
         identified_freqs = xf[peak_indices]
 
         f_low, f_high = np.sort(identified_freqs)
+        print("Frequency Low: ", f_low, " Frequency High: ", f_high)
         closest_key = match_closest_key(f_low, f_high)
 
         if closest_key:
